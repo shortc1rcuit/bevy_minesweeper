@@ -1,0 +1,11 @@
+# bevy_minesweeper
+
+A minesweeper clone written in Rust + Bevy.  
+This is not finished.
+
+## TODO:
+- [x] Loading the tilemap
+- [x] Generating the Minesweeper board
+- [ ] Detecting user input
+- [ ] Processing user input
+- [ ] Win-lose detection
