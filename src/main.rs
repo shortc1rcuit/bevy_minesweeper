@@ -2,15 +2,17 @@ use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod board;
-
 use board::*;
+
+mod input;
+use input::*;
 
 pub const HEIGHT: f32 = 720.0;
 pub const WIDTH: f32 = 1280.0;
 
 fn main() {
-    App::new()
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+    let mut app = App::new();
+    app.insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -18,7 +20,7 @@ fn main() {
                         width: WIDTH,
                         height: HEIGHT,
                         title: "Bevy Minesweeper".to_string(),
-                        resizable: false,
+                        resizable: true,
                         ..default()
                     },
                     ..default()
@@ -27,13 +29,17 @@ fn main() {
         )
         .add_plugin(WorldInspectorPlugin)
         .add_plugin(BoardPlugin)
+        .add_plugin(MyInputPlugin)
         .add_startup_system(spawn_camera)
         .add_startup_system(load_textures)
         .run();
 }
 
+#[derive(Component)]
+struct MainCamera;
+
 fn spawn_camera(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), MainCamera));
 }
 
 #[derive(Resource, Deref, DerefMut)]
