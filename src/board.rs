@@ -6,7 +6,7 @@ use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
 use crate::TileTextures;
 use board_gen::{Board, TileType};
 
-use crate::input::Hoverable;
+use crate::input::Selectable;
 
 #[derive(Resource, Deref, DerefMut, Debug, Default)]
 struct GameBoard(Board);
@@ -108,7 +108,7 @@ fn spawn_tiles(
                     ),
                     ..default()
                 })
-                .insert(Hoverable::new(
+                .insert(Selectable::new(
                     Vec2::new((min_x + (80 * x)) as f32, (min_y + (80 * y)) as f32),
                     Vec2::new(
                         (min_x + (80 * x) + 80) as f32,

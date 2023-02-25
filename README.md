@@ -14,7 +14,7 @@ cargo run --release
 ## TODO:
 - [x] Loading the tilemap
 - [x] Generating the Minesweeper board
-- [ ] Detecting user input
+- [x] Detecting user input
 - [ ] Processing user input
 - [ ] Win-lose detection
 

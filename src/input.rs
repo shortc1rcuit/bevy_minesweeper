@@ -70,26 +70,52 @@ impl Bound {
     }
 }
 
-#[derive(Reflect, Component, Default)]
-#[reflect(Component)]
-pub struct Hoverable {
-    bound: Bound,
-    hovered: bool,
+#[derive(Default, Reflect, Clone, Copy)]
+enum InteractionType {
+    #[default]
+    None,
+    Hovered,
+    Clicked,
+    Held,
+    Released,
 }
 
-impl Hoverable {
+#[derive(Reflect, Component, Default)]
+#[reflect(Component)]
+pub struct Selectable {
+    bound: Bound,
+    interaction: InteractionType,
+}
+
+impl Selectable {
     pub fn new(bottom_left: Vec2, top_right: Vec2) -> Self {
         Self {
             bound: Bound::new(bottom_left, top_right),
-            hovered: false,
+            interaction: InteractionType::None,
         }
     }
 }
 
-fn get_hovered(mut hoverables: Query<&mut Hoverable>, cursor_pos: Res<CursorWorldPos>) {
-    if let Some(position) = cursor_pos.0 {
-        for mut hoverable in &mut hoverables {
-            hoverable.hovered = hoverable.bound.in_bounds(position);
+fn get_selection(mut selectables: Query<&mut Selectable>, cursor_pos: Res<CursorWorldPos>, mouse_input: Res<Input<MouseButton>>) {
+    let Some(position) = cursor_pos.0 else { return };
+
+    let interaction;
+
+    if mouse_input.just_pressed(MouseButton::Left) {
+        interaction = InteractionType::Clicked;
+    } else if mouse_input.pressed(MouseButton::Left) {
+        interaction = InteractionType::Held;
+    } else if mouse_input.just_released(MouseButton::Left) {
+        interaction = InteractionType::Released;
+    } else {
+        interaction = InteractionType::Hovered;
+    }
+    
+    for mut selectable in &mut selectables {
+        if selectable.bound.in_bounds(position) {
+            selectable.interaction = interaction;
+        } else {
+            selectable.interaction = InteractionType::None;
         }
     }
 }
@@ -100,8 +126,8 @@ impl Plugin for MyInputPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CursorWorldPos>()
             .register_type::<CursorWorldPos>()
-            .register_type::<Hoverable>()
+            .register_type::<Selectable>()
             .add_system(cursor_to_world_pos)
-            .add_system(get_hovered.after(cursor_to_world_pos));
+            .add_system(get_selection.after(cursor_to_world_pos));
     }
 }
