@@ -1,12 +1,14 @@
 use rand::prelude::*;
 use std::ops::Index;
 
+/// A tile can either be empty with some amount of neighboring bombs, or a bomb itself.
 #[derive(Clone, PartialEq, Debug)]
 pub enum TileType {
     Empty(u8),
     Bomb,
 }
 
+/// While the game is played, the tile can show it's contents, or be flagged, or not show anything.
 #[derive(Clone, Debug)]
 pub enum TileState {
     Visable,
@@ -14,6 +16,7 @@ pub enum TileState {
     Hidden,
 }
 
+/// A struct that stores a tiles type and it's state.
 #[derive(Clone, Debug)]
 pub struct Tile {
     pub tile_type: TileType,
@@ -30,11 +33,18 @@ impl Default for Tile {
 }
 
 impl Tile {
+    /// Returns true if the tile is a bomb.
     fn is_bomb(&self) -> bool {
         self.tile_type == TileType::Bomb
     }
+
+    /// Returns a reference to the tile's type.
+    pub fn get_type(&self) -> &TileType {
+        &self.tile_type
+    }
 }
 
+/// A struct that contains the tiles that make up a board.
 #[derive(Debug)]
 pub struct Board {
     width: usize,
@@ -57,6 +67,7 @@ impl Index<(usize, usize)> for Board {
     }
 }
 
+/// The offsets from a cell to get its neighbors.
 const NEIGHBORS: [(i8, i8); 8] = [
     (-1, -1),
     (-1, 0),
@@ -69,14 +80,17 @@ const NEIGHBORS: [(i8, i8); 8] = [
 ];
 
 impl Board {
+    /// Returns the width of the board.
     fn width(&self) -> usize {
         self.width
     }
 
+    /// Returns the width of the board.
     fn height(&self) -> usize {
         self.height
     }
 
+    /// Returns a Board with the given width and height.
     fn new(width: usize, height: usize) -> Self {
         Self {
             width,
@@ -85,6 +99,7 @@ impl Board {
         }
     }
 
+    /// Indexes into a board. If the index is out of range [`None`] will be returned.
     fn get(&self, x: i16, y: i16) -> Option<&Tile> {
         if x < 0 || y < 0 {
             return None;
@@ -100,10 +115,12 @@ impl Board {
         }
     }
 
+    /// Sets a tile to have a bomb.
     fn set_bomb(&mut self, x: usize, y: usize) {
         self.tiles[y * self.width + x].tile_type = TileType::Bomb;
     }
 
+    /// Calclulates how many neighboring bombs a tile has.
     fn calc_neighbors(&mut self, x: usize, y: usize) {
         let neighbor_bombs = NEIGHBORS
             .iter()
@@ -122,6 +139,7 @@ impl Board {
         self.tiles[y * self.width + x].tile_type = TileType::Empty(neighbor_bombs);
     }
 
+    /// Generates a random board with the given width, height and number of mines.
     pub fn generate_board(width: usize, height: usize, mine_count: u32) -> Self {
         let mut board: Board = Board::new(width, height);
         let mut placed_bombs = 0;

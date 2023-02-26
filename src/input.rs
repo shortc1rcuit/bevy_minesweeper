@@ -2,11 +2,13 @@ use crate::MainCamera;
 use bevy::prelude::*;
 use bevy::render::camera::RenderTarget;
 
+/// Resource that contains the location of the cursor in world space.
 #[derive(Reflect, Resource, Deref, DerefMut, Default)]
 #[reflect(Resource)]
 struct CursorWorldPos(Option<Vec2>);
 
 //Taken from https://bevy-cheatbook.github.io/cookbook/cursor2world.html#2d-games
+/// Converts the location of the cursor on the screen to the location in the world.
 fn cursor_to_world_pos(
     // need to get window dimensions
     wnds: Res<Windows>,
@@ -48,6 +50,7 @@ fn cursor_to_world_pos(
     }
 }
 
+/// Struct that defines a bounding box.
 #[derive(Reflect, Default)]
 struct Bound {
     bottom_left: Vec2,
@@ -55,6 +58,7 @@ struct Bound {
 }
 
 impl Bound {
+    /// Creates a new bound from the given bottom left (inclusive) and top right (exclusive) corners.
     fn new(bottom_left: Vec2, top_right: Vec2) -> Self {
         Self {
             bottom_left,
@@ -62,6 +66,7 @@ impl Bound {
         }
     }
 
+    /// Checks that a given location is inside the bounding box.
     fn in_bounds(&self, position: Vec2) -> bool {
         (self.bottom_left.x <= position.x)
             & (self.top_right.x > position.x)
@@ -70,16 +75,23 @@ impl Bound {
     }
 }
 
+/// Defines the different interactions that something can have with the cursor.
 #[derive(Default, Reflect, Clone, Copy)]
 enum InteractionType {
     #[default]
+    /// No interaction.
     None,
+    /// Cursor is on object but no mouse button is pressed.
     Hovered,
+    /// First frame of the mouse button being pressed.
     Clicked,
+    /// Any other frame of the mouse button being pressed.
     Held,
+    /// First frame of the mouse button being released.
     Released,
 }
 
+/// Component added to any entity that can be selected.
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
 pub struct Selectable {
@@ -88,6 +100,7 @@ pub struct Selectable {
 }
 
 impl Selectable {
+    /// Creates a new selectable object from the given bottom left (inclusive) and top right (exclusive) corners.
     pub fn new(bottom_left: Vec2, top_right: Vec2) -> Self {
         Self {
             bound: Bound::new(bottom_left, top_right),
@@ -96,7 +109,12 @@ impl Selectable {
     }
 }
 
-fn get_selection(mut selectables: Query<&mut Selectable>, cursor_pos: Res<CursorWorldPos>, mouse_input: Res<Input<MouseButton>>) {
+/// Sets the selection types of any Selectable entities based on the cursor position and mouse button state.
+fn set_selection(
+    mut selectables: Query<&mut Selectable>,
+    cursor_pos: Res<CursorWorldPos>,
+    mouse_input: Res<Input<MouseButton>>,
+) {
     let Some(position) = cursor_pos.0 else { return };
 
     let interaction;
@@ -110,7 +128,7 @@ fn get_selection(mut selectables: Query<&mut Selectable>, cursor_pos: Res<Cursor
     } else {
         interaction = InteractionType::Hovered;
     }
-    
+
     for mut selectable in &mut selectables {
         if selectable.bound.in_bounds(position) {
             selectable.interaction = interaction;
@@ -120,6 +138,7 @@ fn get_selection(mut selectables: Query<&mut Selectable>, cursor_pos: Res<Cursor
     }
 }
 
+/// Bundles the code in this module to be used in the main app.
 pub struct MyInputPlugin;
 
 impl Plugin for MyInputPlugin {
@@ -128,6 +147,6 @@ impl Plugin for MyInputPlugin {
             .register_type::<CursorWorldPos>()
             .register_type::<Selectable>()
             .add_system(cursor_to_world_pos)
-            .add_system(get_selection.after(cursor_to_world_pos));
+            .add_system(set_selection.after(cursor_to_world_pos));
     }
 }

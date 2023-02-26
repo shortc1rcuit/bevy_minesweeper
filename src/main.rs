@@ -7,12 +7,14 @@ use board::*;
 mod input;
 use input::*;
 
+/// Height of the window.
 pub const HEIGHT: f32 = 720.0;
+/// Width of the window.
 pub const WIDTH: f32 = 1280.0;
 
 fn main() {
-    let mut app = App::new();
-    app.insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+    App::new()
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -35,13 +37,20 @@ fn main() {
         .run();
 }
 
+/// A tag to keep track of the main camera.
 #[derive(Component)]
 struct MainCamera;
 
+/// Adds the camera to the world and tags it as the main one.
 fn spawn_camera(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), MainCamera));
 }
 
+/// Holds the textures for the tiles, laid out as follows:
+/// - 0-8: An empty cell with that many neighbors
+/// - 9: A hidden cell
+/// - 10: A flagged cell
+/// - 11: A bomb
 #[derive(Resource, Deref, DerefMut)]
 pub struct TileTextures(Handle<TextureAtlas>);
 

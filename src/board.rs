@@ -8,15 +8,19 @@ use board_gen::{Board, TileType};
 
 use crate::input::Selectable;
 
+/// Resource that holds the contents of the minesweeper board.
 #[derive(Resource, Deref, DerefMut, Debug, Default)]
 struct GameBoard(Board);
 
+/// Settings for generating a minesweeper board.
 #[derive(Default)]
 struct BoardSettings {
     size: UVec2,
     mine_ratio: f32,
 }
 
+/// Egui window that allows for a board to be generated.
+/// Used for debugging.
 fn generate_board(
     mut commands: Commands,
     mut egui_context: ResMut<EguiContext>,
@@ -68,6 +72,7 @@ fn generate_board(
     });
 }
 
+/// Generates a board with the settings and spawns in the entities to display it.
 fn spawn_tiles(
     mut commands: Commands,
     mut board: ResMut<GameBoard>,
@@ -92,8 +97,8 @@ fn spawn_tiles(
             commands
                 .spawn(SpriteSheetBundle {
                     sprite: TextureAtlasSprite {
-                        index: match board[(x as usize, y as usize)].tile_type {
-                            TileType::Empty(x) => x as usize,
+                        index: match board[(x as usize, y as usize)].get_type() {
+                            TileType::Empty(x) => *x as usize,
                             TileType::Bomb => 11,
                         },
                         ..default()
@@ -119,6 +124,7 @@ fn spawn_tiles(
     }
 }
 
+/// Bundles the code in this module to be used in the main app.
 pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
