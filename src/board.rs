@@ -1,7 +1,7 @@
 mod board_gen;
 
 use bevy::prelude::*;
-use bevy_inspector_egui::bevy_egui::{egui, EguiContext};
+use bevy_inspector_egui::bevy_egui::{egui, EguiContexts};
 
 use crate::TileTextures;
 use board_gen::{Board, TileType};
@@ -23,7 +23,7 @@ struct BoardSettings {
 /// Used for debugging.
 fn generate_board(
     mut commands: Commands,
-    mut egui_context: ResMut<EguiContext>,
+    mut egui_context: EguiContexts,
     board: ResMut<GameBoard>,
     mut board_settings: Local<BoardSettings>,
     mut tiles: Query<Entity, With<TextureAtlasSprite>>,
@@ -129,6 +129,7 @@ pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GameBoard>().add_system(generate_board);
+        app.init_resource::<GameBoard>()
+        .add_system(generate_board);
     }
 }

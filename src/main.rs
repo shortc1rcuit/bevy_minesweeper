@@ -18,18 +18,17 @@ fn main() {
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
-                    window: WindowDescriptor {
-                        width: WIDTH,
-                        height: HEIGHT,
+                    primary_window: Some(Window {
+                        resolution: (WIDTH, HEIGHT).into(),
                         title: "Bevy Minesweeper".to_string(),
                         resizable: true,
                         ..default()
-                    },
+                    }),
                     ..default()
                 })
                 .set(ImagePlugin::default_nearest()),
         )
-        .add_plugin(WorldInspectorPlugin)
+        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(BoardPlugin)
         .add_plugin(MyInputPlugin)
         .add_startup_system(spawn_camera)
