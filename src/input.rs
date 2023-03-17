@@ -1,6 +1,8 @@
+use crate::board::board_gen::TileType;
+use crate::board::{GameBoard, TileEntity};
+use crate::{HEIGHT, WIDTH};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use crate::{HEIGHT, WIDTH};
 
 /// Struct that defines a bounding box.
 #[derive(Reflect, Default)]
@@ -28,7 +30,7 @@ impl Bound {
 }
 
 /// Defines the different interactions that something can have with the cursor.
-#[derive(Default, Reflect, Clone, Copy)]
+#[derive(Default, Reflect, Clone, Copy, PartialEq)]
 enum InteractionType {
     #[default]
     /// No interaction.
@@ -72,7 +74,7 @@ fn set_selection(
     };
 
     let Some(position) = window.cursor_position() else { return };
-    let position = position - Vec2::new(WIDTH/2., HEIGHT/2.);
+    let position = position - Vec2::new(WIDTH / 2., HEIGHT / 2.);
 
     let interaction;
 
@@ -95,12 +97,23 @@ fn set_selection(
     }
 }
 
+fn tile_click(
+    mut tiles: Query<(&mut TextureAtlasSprite, &Selectable, &TileEntity)>,
+    board: Res<GameBoard>,
+) {
+    for (mut atlas, selection, tile) in &mut tiles {
+        if selection.interaction == InteractionType::Clicked {
+            atlas.index = 9;
+        }
+    }
+}
+
 /// Bundles the code in this module to be used in the main app.
 pub struct MyInputPlugin;
 
 impl Plugin for MyInputPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Selectable>()
-            .add_system(set_selection);
+            .add_systems((set_selection, tile_click).chain());
     }
 }

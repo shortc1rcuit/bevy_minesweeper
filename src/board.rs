@@ -1,4 +1,4 @@
-mod board_gen;
+pub mod board_gen;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::{egui, EguiContexts};
@@ -10,13 +10,20 @@ use crate::input::Selectable;
 
 /// Resource that holds the contents of the minesweeper board.
 #[derive(Resource, Deref, DerefMut, Debug, Default)]
-struct GameBoard(Board);
+pub struct GameBoard(Board);
 
 /// Settings for generating a minesweeper board.
 #[derive(Default)]
 struct BoardSettings {
     size: UVec2,
     mine_ratio: f32,
+}
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct TileEntity {
+    pub x: usize,
+    pub y: usize,
 }
 
 /// Egui window that allows for a board to be generated.
@@ -119,7 +126,11 @@ fn spawn_tiles(
                         (min_x + (80 * x) + 80) as f32,
                         (min_y + (80 * y) + 80) as f32,
                     ),
-                ));
+                ))
+                .insert(TileEntity {
+                    x: x as usize,
+                    y: y as usize,
+                });
         }
     }
 }
@@ -130,6 +141,7 @@ pub struct BoardPlugin;
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameBoard>()
-        .add_system(generate_board);
+            .register_type::<TileEntity>()
+            .add_system(generate_board);
     }
 }
