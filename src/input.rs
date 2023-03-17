@@ -143,7 +143,10 @@ fn tile_click(
 ) {
     for (mut atlas, selection, tile) in &mut tiles {
         if selection.interaction == InteractionType::Clicked {
-            atlas.index = 9;
+            atlas.index = match board[(tile.x, tile.y)].get_type() {
+                TileType::Empty(x) => *x as usize,
+                TileType::Bomb => 11,
+            };
         }
     }
 }

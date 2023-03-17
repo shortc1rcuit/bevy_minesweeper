@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::{egui, EguiContexts};
 
 use crate::TileTextures;
-use board_gen::{Board, TileType};
+use board_gen::Board;
 
 use crate::input::Selectable;
 
@@ -104,10 +104,7 @@ fn spawn_tiles(
             commands
                 .spawn(SpriteSheetBundle {
                     sprite: TextureAtlasSprite {
-                        index: match board[(x as usize, y as usize)].get_type() {
-                            TileType::Empty(x) => *x as usize,
-                            TileType::Bomb => 11,
-                        },
+                        index: 9,
                         ..default()
                     },
                     texture_atlas: tile_map.clone(),
