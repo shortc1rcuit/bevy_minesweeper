@@ -4,11 +4,6 @@ use crate::MainCamera;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-/// Resource that contains the location of the cursor in world space.
-#[derive(Reflect, Resource, Deref, DerefMut, Default)]
-#[reflect(Resource)]
-struct CursorWorldPos(Option<Vec2>);
-
 //Taken from https://bevy-cheatbook.github.io/cookbook/cursor2world.html#2d-games
 /// Converts the location of the cursor on the screen to the location in the world.
 fn cursor_to_world_pos(
@@ -16,14 +11,13 @@ fn cursor_to_world_pos(
     wnds: Query<&Window, With<PrimaryWindow>>,
     // query to get camera transform
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    mut cursor_world_pos: ResMut<CursorWorldPos>,
-) {
+) -> Option<Vec2> {
     // get the camera info and transform
     // assuming there is exactly one main camera entity, so query::single() is OK
     let (camera, camera_transform) = q_camera.single();
 
     let Ok(wnd) = wnds.get_single() else {
-        return;
+        return None;
     };
 
     // check if the cursor is inside the window and get its position
@@ -43,9 +37,9 @@ fn cursor_to_world_pos(
         // reduce it to a 2D value
         let world_pos: Vec2 = world_pos.truncate();
 
-        cursor_world_pos.0 = Some(world_pos);
+        Some(world_pos)
     } else {
-        cursor_world_pos.0 = None;
+        None
     }
 }
 
@@ -82,6 +76,26 @@ enum InteractionType {
     None,
     /// Cursor is on object but no mouse button is pressed.
     Hovered,
+}
+
+/// Component added to any entity that can be selected.
+#[derive(Reflect, Component, Default)]
+#[reflect(Component)]
+pub struct Selectable {
+    bound: Bound,
+}
+
+impl Selectable {
+    /// Creates a new selectable object from the given bottom left (inclusive) and top right (exclusive) corners.
+    pub fn new(bottom_left: Vec2, top_right: Vec2) -> Self {
+        Self {
+            bound: Bound::new(bottom_left, top_right),
+        }
+    }
+}
+
+#[derive(PartialEq)]
+enum ClickType {
     /// First frame of the mouse button being pressed.
     Clicked,
     /// Any other frame of the mouse button being pressed.
@@ -90,49 +104,37 @@ enum InteractionType {
     Released,
 }
 
-/// Component added to any entity that can be selected.
-#[derive(Reflect, Component, Default)]
-#[reflect(Component)]
-pub struct Selectable {
-    bound: Bound,
-    interaction: InteractionType,
+struct ClickEvent {
+    position: Vec2,
+    click_type: ClickType,
 }
 
-impl Selectable {
-    /// Creates a new selectable object from the given bottom left (inclusive) and top right (exclusive) corners.
-    pub fn new(bottom_left: Vec2, top_right: Vec2) -> Self {
-        Self {
-            bound: Bound::new(bottom_left, top_right),
-            interaction: InteractionType::None,
-        }
-    }
-}
-
-/// Sets the selection types of any Selectable entities based on the cursor position and mouse button state.
-fn set_selection(
-    mut selectables: Query<&mut Selectable>,
-    cursor_pos: Res<CursorWorldPos>,
+fn click_detection(
     mouse_input: Res<Input<MouseButton>>,
+    wnds: Query<&Window, With<PrimaryWindow>>,
+    q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    mut clicks: EventWriter<ClickEvent>,
 ) {
-    let Some(position) = cursor_pos.0 else { return };
-
-    let interaction;
-
     if mouse_input.just_pressed(MouseButton::Left) {
-        interaction = InteractionType::Clicked;
+        if let Some(position) = cursor_to_world_pos(wnds, q_camera) {
+            clicks.send(ClickEvent {
+                position,
+                click_type: ClickType::Clicked,
+            })
+        }
     } else if mouse_input.pressed(MouseButton::Left) {
-        interaction = InteractionType::Held;
+        if let Some(position) = cursor_to_world_pos(wnds, q_camera) {
+            clicks.send(ClickEvent {
+                position,
+                click_type: ClickType::Held,
+            })
+        }
     } else if mouse_input.just_released(MouseButton::Left) {
-        interaction = InteractionType::Released;
-    } else {
-        interaction = InteractionType::Hovered;
-    }
-
-    for mut selectable in &mut selectables {
-        if selectable.bound.in_bounds(position) {
-            selectable.interaction = interaction;
-        } else {
-            selectable.interaction = InteractionType::None;
+        if let Some(position) = cursor_to_world_pos(wnds, q_camera) {
+            clicks.send(ClickEvent {
+                position,
+                click_type: ClickType::Released,
+            })
         }
     }
 }
@@ -140,13 +142,25 @@ fn set_selection(
 fn tile_click(
     mut tiles: Query<(&mut TextureAtlasSprite, &Selectable, &TileEntity)>,
     board: Res<GameBoard>,
+    mut clicks: EventReader<ClickEvent>,
 ) {
-    for (mut atlas, selection, tile) in &mut tiles {
+    /*for (mut atlas, selection, tile) in &mut tiles {
         if selection.interaction == InteractionType::Clicked {
             atlas.index = match board[(tile.x, tile.y)].get_type() {
                 TileType::Empty(x) => *x as usize,
                 TileType::Bomb => 11,
             };
+        }
+    }*/
+
+    for click in clicks.iter().filter(|x| x.click_type == ClickType::Clicked) {
+        for (mut atlas, selection, tile) in &mut tiles {
+            if selection.bound.in_bounds(click.position) {
+                atlas.index = match board[(tile.x, tile.y)].get_type() {
+                    TileType::Empty(x) => *x as usize,
+                    TileType::Bomb => 11,
+                };
+            }
         }
     }
 }
@@ -157,7 +171,7 @@ pub struct MyInputPlugin;
 impl Plugin for MyInputPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Selectable>()
-            .init_resource::<CursorWorldPos>()
-            .add_systems((cursor_to_world_pos, set_selection, tile_click).chain());
+            .add_event::<ClickEvent>()
+            .add_systems((click_detection, tile_click).chain());
     }
 }
