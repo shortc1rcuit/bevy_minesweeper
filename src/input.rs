@@ -144,15 +144,6 @@ fn tile_click(
     board: Res<GameBoard>,
     mut clicks: EventReader<ClickEvent>,
 ) {
-    /*for (mut atlas, selection, tile) in &mut tiles {
-        if selection.interaction == InteractionType::Clicked {
-            atlas.index = match board[(tile.x, tile.y)].get_type() {
-                TileType::Empty(x) => *x as usize,
-                TileType::Bomb => 11,
-            };
-        }
-    }*/
-
     for click in clicks.iter().filter(|x| x.click_type == ClickType::Clicked) {
         for (mut atlas, selection, tile) in &mut tiles {
             if selection.bound.in_bounds(click.position) {
