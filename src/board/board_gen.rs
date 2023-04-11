@@ -9,7 +9,7 @@ pub enum TileType {
 }
 
 /// While the game is played, the tile can show it's contents, or be flagged, or not show anything.
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum TileState {
     Visable,
     Flagged,
@@ -122,6 +122,10 @@ impl Board {
 
     pub fn set_state(&mut self, x: usize, y: usize, state: TileState) {
         self.tiles[y * self.width + x].state = state;
+    }
+
+    pub fn get_state(&mut self, x: usize, y: usize) -> TileState {
+        self.tiles[y * self.width + x].state
     }
 
     /// Calclulates how many neighboring bombs a tile has.

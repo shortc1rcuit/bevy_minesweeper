@@ -139,9 +139,17 @@ fn tile_flag(
     for click in r_clicks.iter() {
         for (mut atlas, selection, tile) in &mut tiles {
             if selection.bound.in_bounds(click.position) {
-                atlas.index = 10;
-
-                board.set_state(tile.x, tile.y, TileState::Flagged);
+                match board.get_state(tile.x, tile.y) {
+                    TileState::Visable => {},
+                    TileState::Flagged => {
+                        atlas.index = 9;
+                        board.set_state(tile.x, tile.y, TileState::Hidden)
+                    },
+                    TileState::Hidden => {
+                        atlas.index = 10;
+                        board.set_state(tile.x, tile.y, TileState::Flagged);
+                    },
+                }
             }
         }
     }
