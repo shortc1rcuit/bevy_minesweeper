@@ -9,7 +9,7 @@ pub enum TileType {
 }
 
 /// While the game is played, the tile can show it's contents, or be flagged, or not show anything.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TileState {
     Visable,
     Flagged,

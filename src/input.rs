@@ -119,7 +119,9 @@ fn tile_reveal(
 ) {
     for click in l_clicks.iter() {
         for (mut atlas, selection, tile) in &mut tiles {
-            if selection.bound.in_bounds(click.position) {
+            if selection.bound.in_bounds(click.position)
+                && board.get_state(tile.x, tile.y) == TileState::Hidden
+            {
                 atlas.index = match board[(tile.x, tile.y)].get_type() {
                     TileType::Empty(x) => *x as usize,
                     TileType::Bomb => 11,
@@ -140,15 +142,15 @@ fn tile_flag(
         for (mut atlas, selection, tile) in &mut tiles {
             if selection.bound.in_bounds(click.position) {
                 match board.get_state(tile.x, tile.y) {
-                    TileState::Visable => {},
+                    TileState::Visable => {}
                     TileState::Flagged => {
                         atlas.index = 9;
                         board.set_state(tile.x, tile.y, TileState::Hidden)
-                    },
+                    }
                     TileState::Hidden => {
                         atlas.index = 10;
                         board.set_state(tile.x, tile.y, TileState::Flagged);
-                    },
+                    }
                 }
             }
         }
