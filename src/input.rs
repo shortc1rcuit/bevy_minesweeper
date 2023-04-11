@@ -3,6 +3,7 @@ use crate::board::{GameBoard, TileEntity};
 use crate::MainCamera;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use bevy::input::mouse::MouseWheel;
 
 //Taken from https://bevy-cheatbook.github.io/cookbook/cursor2world.html#2d-games
 /// Converts the location of the cursor on the screen to the location in the world.
@@ -92,12 +93,21 @@ struct RightClick {
     position: Vec2,
 }
 
-fn click_detection(
+struct ScrollVert {
+    position: Vec2,
+    factor: f32,
+}
+
+const SCROLL_FACTOR: f32 = 1.2;
+
+fn mouse_handling(
     mouse_input: Res<Input<MouseButton>>,
+    mut scroll_evr: EventReader<MouseWheel>,
     wnds: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut l_clicks: EventWriter<LeftClick>,
     mut r_clicks: EventWriter<RightClick>,
+    mut v_scrolls: EventWriter<ScrollVert>,
 ) {
     let Some(position) = cursor_to_world_pos(wnds, q_camera) else {
         return;
@@ -109,6 +119,10 @@ fn click_detection(
 
     if mouse_input.just_pressed(MouseButton::Right) {
         r_clicks.send(RightClick { position })
+    }
+
+    for scroll in scroll_evr.iter() {
+        v_scrolls.send(ScrollVert { position, factor: SCROLL_FACTOR.powf(-scroll.y) })
     }
 }
 
@@ -157,6 +171,15 @@ fn tile_flag(
     }
 }
 
+fn zoom(mut camera: Query<&mut Transform, With<MainCamera>>, mut v_scrolls: EventReader<ScrollVert>,) {
+    let mut camera = camera.iter_mut().next().unwrap();
+
+    for scroll in v_scrolls.iter() {
+        camera.scale.x *= scroll.factor;
+        camera.scale.y *= scroll.factor;
+    }
+}
+
 /// Bundles the code in this module to be used in the main app.
 pub struct MyInputPlugin;
 
@@ -165,10 +188,12 @@ impl Plugin for MyInputPlugin {
         app.register_type::<Selectable>()
             .add_event::<LeftClick>()
             .add_event::<RightClick>()
+            .add_event::<ScrollVert>()
             .add_systems((
-                click_detection,
-                tile_reveal.after(click_detection),
-                tile_flag.after(click_detection),
+                mouse_handling,
+                tile_reveal.after(mouse_handling),
+                tile_flag.after(mouse_handling),
+                zoom.after(mouse_handling)
             ));
     }
 }
