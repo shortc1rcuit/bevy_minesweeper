@@ -120,6 +120,10 @@ impl Board {
         self.tiles[y * self.width + x].tile_type = TileType::Bomb;
     }
 
+    pub fn set_state(&mut self, x: usize, y: usize, state: TileState) {
+        self.tiles[y * self.width + x].state = state;
+    }
+
     /// Calclulates how many neighboring bombs a tile has.
     fn calc_neighbors(&mut self, x: usize, y: usize) {
         let neighbor_bombs = NEIGHBORS

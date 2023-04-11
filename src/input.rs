@@ -1,4 +1,4 @@
-use crate::board::board_gen::TileType;
+use crate::board::board_gen::{TileType, TileState};
 use crate::board::{GameBoard, TileEntity};
 use crate::MainCamera;
 use bevy::prelude::*;
@@ -107,6 +107,7 @@ enum ClickType {
 struct ClickEvent {
     position: Vec2,
     click_type: ClickType,
+    button: MouseButton,
 }
 
 fn click_detection(
@@ -115,42 +116,69 @@ fn click_detection(
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut clicks: EventWriter<ClickEvent>,
 ) {
+    let Some(position) = cursor_to_world_pos(wnds, q_camera) else {
+        return;
+    };
+
     if mouse_input.just_pressed(MouseButton::Left) {
-        if let Some(position) = cursor_to_world_pos(wnds, q_camera) {
             clicks.send(ClickEvent {
                 position,
                 click_type: ClickType::Clicked,
+                button: MouseButton::Left,
             })
-        }
     } else if mouse_input.pressed(MouseButton::Left) {
-        if let Some(position) = cursor_to_world_pos(wnds, q_camera) {
             clicks.send(ClickEvent {
                 position,
                 click_type: ClickType::Held,
+                button: MouseButton::Left,
             })
-        }
     } else if mouse_input.just_released(MouseButton::Left) {
-        if let Some(position) = cursor_to_world_pos(wnds, q_camera) {
             clicks.send(ClickEvent {
                 position,
                 click_type: ClickType::Released,
+                button: MouseButton::Left,
             })
-        }
+    }
+
+    if mouse_input.pressed(MouseButton::Right) {
+        clicks.send(ClickEvent {
+            position,
+            click_type: ClickType::Clicked,
+            button: MouseButton::Right,
+        })
     }
 }
 
-fn tile_click(
+fn tile_reveal(
     mut tiles: Query<(&mut TextureAtlasSprite, &Selectable, &TileEntity)>,
-    board: Res<GameBoard>,
+    mut board: ResMut<GameBoard>,
     mut clicks: EventReader<ClickEvent>,
 ) {
-    for click in clicks.iter().filter(|x| x.click_type == ClickType::Clicked) {
+    for click in clicks.iter().filter(|x| x.click_type == ClickType::Clicked && x.button == MouseButton::Left) {
         for (mut atlas, selection, tile) in &mut tiles {
             if selection.bound.in_bounds(click.position) {
                 atlas.index = match board[(tile.x, tile.y)].get_type() {
                     TileType::Empty(x) => *x as usize,
                     TileType::Bomb => 11,
                 };
+
+                board.set_state(tile.x, tile.y, TileState::Visable);
+            }
+        }
+    }
+}
+
+fn tile_flag(
+    mut tiles: Query<(&mut TextureAtlasSprite, &Selectable, &TileEntity)>,
+    mut board: ResMut<GameBoard>,
+    mut clicks: EventReader<ClickEvent>,
+) {
+    for click in clicks.iter().filter(|x| x.button == MouseButton::Right) {
+        for (mut atlas, selection, tile) in &mut tiles {
+            if selection.bound.in_bounds(click.position) {
+                atlas.index = 10;
+
+                board.set_state(tile.x, tile.y, TileState::Flagged);
             }
         }
     }
@@ -163,6 +191,6 @@ impl Plugin for MyInputPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Selectable>()
             .add_event::<ClickEvent>()
-            .add_systems((click_detection, tile_click).chain());
+            .add_systems((click_detection, tile_reveal.after(click_detection), tile_flag.after(click_detection)));
     }
 }
