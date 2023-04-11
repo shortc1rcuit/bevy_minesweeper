@@ -1,4 +1,4 @@
-use crate::board::board_gen::{TileType, TileState};
+use crate::board::board_gen::{TileState, TileType};
 use crate::board::{GameBoard, TileEntity};
 use crate::MainCamera;
 use bevy::prelude::*;
@@ -68,16 +68,6 @@ impl Bound {
     }
 }
 
-/// Defines the different interactions that something can have with the cursor.
-#[derive(Default, Reflect, Clone, Copy, PartialEq)]
-enum InteractionType {
-    #[default]
-    /// No interaction.
-    None,
-    /// Cursor is on object but no mouse button is pressed.
-    Hovered,
-}
-
 /// Component added to any entity that can be selected.
 #[derive(Reflect, Component, Default)]
 #[reflect(Component)]
@@ -94,67 +84,40 @@ impl Selectable {
     }
 }
 
-#[derive(PartialEq)]
-enum ClickType {
-    /// First frame of the mouse button being pressed.
-    Clicked,
-    /// Any other frame of the mouse button being pressed.
-    Held,
-    /// First frame of the mouse button being released.
-    Released,
+struct LeftClick {
+    position: Vec2,
 }
 
-struct ClickEvent {
+struct RightClick {
     position: Vec2,
-    click_type: ClickType,
-    button: MouseButton,
 }
 
 fn click_detection(
     mouse_input: Res<Input<MouseButton>>,
     wnds: Query<&Window, With<PrimaryWindow>>,
     q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
-    mut clicks: EventWriter<ClickEvent>,
+    mut l_clicks: EventWriter<LeftClick>,
+    mut r_clicks: EventWriter<RightClick>,
 ) {
     let Some(position) = cursor_to_world_pos(wnds, q_camera) else {
         return;
     };
 
     if mouse_input.just_pressed(MouseButton::Left) {
-            clicks.send(ClickEvent {
-                position,
-                click_type: ClickType::Clicked,
-                button: MouseButton::Left,
-            })
-    } else if mouse_input.pressed(MouseButton::Left) {
-            clicks.send(ClickEvent {
-                position,
-                click_type: ClickType::Held,
-                button: MouseButton::Left,
-            })
-    } else if mouse_input.just_released(MouseButton::Left) {
-            clicks.send(ClickEvent {
-                position,
-                click_type: ClickType::Released,
-                button: MouseButton::Left,
-            })
+        l_clicks.send(LeftClick { position })
     }
 
-    if mouse_input.pressed(MouseButton::Right) {
-        clicks.send(ClickEvent {
-            position,
-            click_type: ClickType::Clicked,
-            button: MouseButton::Right,
-        })
+    if mouse_input.just_pressed(MouseButton::Right) {
+        r_clicks.send(RightClick { position })
     }
 }
 
 fn tile_reveal(
     mut tiles: Query<(&mut TextureAtlasSprite, &Selectable, &TileEntity)>,
     mut board: ResMut<GameBoard>,
-    mut clicks: EventReader<ClickEvent>,
+    mut l_clicks: EventReader<LeftClick>,
 ) {
-    for click in clicks.iter().filter(|x| x.click_type == ClickType::Clicked && x.button == MouseButton::Left) {
+    for click in l_clicks.iter() {
         for (mut atlas, selection, tile) in &mut tiles {
             if selection.bound.in_bounds(click.position) {
                 atlas.index = match board[(tile.x, tile.y)].get_type() {
@@ -171,9 +134,9 @@ fn tile_reveal(
 fn tile_flag(
     mut tiles: Query<(&mut TextureAtlasSprite, &Selectable, &TileEntity)>,
     mut board: ResMut<GameBoard>,
-    mut clicks: EventReader<ClickEvent>,
+    mut r_clicks: EventReader<RightClick>,
 ) {
-    for click in clicks.iter().filter(|x| x.button == MouseButton::Right) {
+    for click in r_clicks.iter() {
         for (mut atlas, selection, tile) in &mut tiles {
             if selection.bound.in_bounds(click.position) {
                 atlas.index = 10;
@@ -190,7 +153,12 @@ pub struct MyInputPlugin;
 impl Plugin for MyInputPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<Selectable>()
-            .add_event::<ClickEvent>()
-            .add_systems((click_detection, tile_reveal.after(click_detection), tile_flag.after(click_detection)));
+            .add_event::<LeftClick>()
+            .add_event::<RightClick>()
+            .add_systems((
+                click_detection,
+                tile_reveal.after(click_detection),
+                tile_flag.after(click_detection),
+            ));
     }
 }
